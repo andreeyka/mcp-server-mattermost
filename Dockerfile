@@ -4,15 +4,16 @@ WORKDIR /app
 
 # Optimization flags
 ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
     UV_NO_PROGRESS=1 \
     PYTHONUNBUFFERED=1
 
-# Copy dependency files first for layer caching
+# Install dependencies first (cached unless pyproject.toml/uv.lock change)
 COPY pyproject.toml uv.lock README.md ./
-COPY src ./src
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Install dependencies as root (cache in /root/.cache/uv)
-# The .venv will be in /app and accessible to non-root user
+# Install the project itself (re-runs only when src/ changes)
+COPY src ./src
 RUN uv sync --frozen --no-dev
 
 # Create non-root user for security
