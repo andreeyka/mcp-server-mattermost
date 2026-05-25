@@ -49,13 +49,16 @@ Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`.
 
 List channels you are a member of in a team.
 
-Returns your channels filtered by type.
-By default returns all types.
-Use channel_types to narrow results.
+Returns your channels with unread counters for the authenticated user.
+`unread_msg_count` / `mention_count` count thread replies too (the channel badge with Collapsed Reply Threads off).
+`unread_msg_count_root` / `mention_count_root` count only root posts (the badge with Collapsed Reply Threads on).
+Use `channel_types` to narrow results.
+Use `only_unread` to return only channels with unread messages.
+For discovering public channels you haven't joined yet, use list_public_channels.
 
 ### Example prompts
 
-- "What channels am I in?"
+- "What channels have unread messages?"
 - "Show my private channels"
 - "List all my channels in this team"
 
@@ -73,14 +76,24 @@ Use channel_types to narrow results.
 |------|------|----------|---------|-------------|
 | `team_id` | string | ✓ | — | Team ID (26-character alphanumeric) |
 | `channel_types` | array | — | null | Channel types to include: O (public), P (private), D (direct), G (group). Default null returns all types. |
+| `only_unread` | boolean | — | false | Return only channels with unread messages. |
 
 ### Returns
 
-Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`.
+Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`,
+`total_msg_count`, plus four unread counters for the authenticated user:
+
+- `unread_msg_count` / `mention_count` — non-root semantics: thread replies are
+  counted. Match the channel unread badge when Collapsed Reply Threads is off.
+- `unread_msg_count_root` / `mention_count_root` — root posts only, excluding
+  thread replies. Match the channel unread badge when Collapsed Reply Threads is on.
+
+Channels without a membership record report 0 for all four counters.
 
 ### Mattermost API
 
-[GET /api/v4/users/{user_id}/teams/{team_id}/channels](https://api.mattermost.com/#tag/channels/operation/GetChannelsForTeamForUser)
+- [GET /api/v4/users/{user_id}/teams/{team_id}/channels](https://api.mattermost.com/#tag/channels/operation/GetChannelsForTeamForUser)
+- [GET /api/v4/users/{user_id}/teams/{team_id}/channels/members](https://api.mattermost.com/#tag/channels/operation/GetChannelMembersForUser)
 
 ---
 

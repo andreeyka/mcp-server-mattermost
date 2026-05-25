@@ -9,7 +9,16 @@ from pydantic import Field
 from mcp_server_mattermost.client import MattermostClient
 from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
-from mcp_server_mattermost.models import Channel, ChannelId, ChannelMember, ChannelName, ChannelType, TeamId, UserId
+from mcp_server_mattermost.models import (
+    Channel,
+    ChannelId,
+    ChannelMember,
+    ChannelName,
+    ChannelType,
+    ChannelWithUnreads,
+    TeamId,
+    UserId,
+)
 
 
 @tool(
@@ -56,19 +65,32 @@ async def list_my_channels(
             ),
         ),
     ] = None,
+    only_unread: Annotated[  # noqa: FBT002
+        bool,
+        Field(description="Return only channels with unread messages"),
+    ] = False,
     client: MattermostClient = Depends(get_client),  # noqa: B008
-) -> list[Channel]:
+) -> list[ChannelWithUnreads]:
     """List channels you are a member of in a team.
 
-    Returns your channels filtered by type. By default returns all types.
+    Returns your channels with unread counters for the authenticated user. Two
+    counter pairs are provided: unread_msg_count / mention_count count thread
+    replies too (the channel badge with Collapsed Reply Threads off), while
+    unread_msg_count_root / mention_count_root count only root posts (the badge
+    with Collapsed Reply Threads on). Channels without a membership record
+    report 0 for all four counters.
     Use channel_types to narrow results: ["O", "P"] for workspace channels
     without DMs, or ["D"] for direct messages only.
+    Use only_unread=True to get only channels with unread messages.
     For discovering public channels you haven't joined yet, use list_public_channels.
     """
-    data = await client.get_my_channels(team_id=team_id)
+    data = await client.get_my_channels_with_unreads(team_id=team_id)
     if channel_types is not None:
         data = [ch for ch in data if ch.get("type") in channel_types]
-    return [Channel(**item) for item in data]
+    result = [ChannelWithUnreads.model_validate(ch) for ch in data]
+    if only_unread:
+        result = [ch for ch in result if ch.unread_msg_count > 0]
+    return result
 
 
 @tool(
